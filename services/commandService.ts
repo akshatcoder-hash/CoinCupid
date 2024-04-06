@@ -1,20 +1,26 @@
 import { Message } from "node-telegram-bot-api";
 import TelegramBot from "node-telegram-bot-api";
+import { createOrGetWallet } from "./walletService";
 
-export const handleStartCommand = (msg: Message, bot: TelegramBot) => {
-  const chatId = msg.chat.id;
-  const response = `💘 Welcome to CoinCupid! 💘
-Find your perfect memecoin match with a swipe!
+export const handleStartCommand = async (msg: Message, bot: TelegramBot) => {
+    const chatId = msg.chat.id;
+    const { publicKey, isNew } = createOrGetWallet(chatId.toString());
 
-Here's how to get started:
-1. 💸 Send some SOL to your CoinCupid wallet to begin.
-2. 💖 Swipe right (👍) on a memecoin to "like" and buy, or swipe left (👎) to pass.
-3. 🔄 Refresh your balance anytime to see your new matches and holdings.
+    let response = `Welcome to CoinCupid! 💘\n`;
 
-Ready to find your first memecoin match? Tap 'Discover' to begin!
+    if (isNew) {
+        response += `I've created a new wallet for you! Your wallet address is: ${publicKey}\n`;
+    } else {
+        response += `You already have a wallet! Your wallet address is: ${publicKey}\n`;
+    }
 
-For wallet info and private key retrieval, please use the 'Wallet' feature with caution.`;
-  bot.sendMessage(chatId, response);
+    response += `💸 Send some SOL to your CoinCupid wallet to begin.\n`;
+    response += `💖 Swipe right (👍) on a memecoin to "like" and buy, or swipe left (👎) to pass.\n`;
+    response += `🔄 Refresh your balance anytime to see your new matches and holdings.\n\n`;
+    response += `Ready to find your first memecoin match? Tap 'Discover' to begin!\n\n`;
+    response += `For wallet info and private key retrieval, please use the 'Wallet' feature with caution.`;
+
+    bot.sendMessage(chatId, response);
 };
 
 export const handleHelpCommand = (msg: Message, bot: TelegramBot) => {
