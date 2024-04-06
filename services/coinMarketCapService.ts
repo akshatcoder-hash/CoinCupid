@@ -1,4 +1,4 @@
-import fetch from 'node-fetch';
+import fetch from 'cross-fetch';
 
 export interface CoinMarketCapApiResponse {
   data: { [key: string]: CoinDetail[] }; // Since a symbol can map to multiple coins

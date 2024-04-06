@@ -60,4 +60,22 @@ bot.onText(/\/discover/, async (msg) => {
     }
 });
 
+bot.on('callback_query', async (callbackQuery) => {
+    const chatId = callbackQuery.message?.chat.id;
+    if (!chatId) return;
+
+    const data = callbackQuery.data; // e.g., "like_WIF" or "pass"
+    if (!data) return;
+
+    if (data.startsWith('like_')) {
+        const symbol = data.split('_')[1]; // e.g., "WIF"
+        
+        // Here, you would initiate the swap or any action you want to perform
+        // For the sake of this example, let's just send a confirmation message
+        bot.sendMessage(chatId, `You liked ${symbol}! Implement swap logic here.`);
+    } else if (data === 'pass') {
+        bot.sendMessage(chatId, "Passed! Discover another memecoin with /discover.");
+    }
+});
+
 console.log("CoinCupid bot is running...");
