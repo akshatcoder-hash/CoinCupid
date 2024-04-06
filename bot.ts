@@ -1,11 +1,11 @@
 import dotenv from 'dotenv';
 dotenv.config();
 import TelegramBot from 'node-telegram-bot-api';
-import { handleStartCommand, handleHelpCommand } from './services/commandService'
+import { handleStartCommand, handleHelpCommand } from './services/commandService';
 import { getRandomCoinSymbol } from './services/memecoinService';
 import { fetchCoinMarketCapInfo } from './services/coinMarketCapService';
+import { createOrGetWallet } from './services/walletService'; // Make sure this is implemented
 
-// Ensure the TELEGRAM_BOT_TOKEN is specified in the .env file
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) {
   console.error("TELEGRAM_BOT_TOKEN is not defined. Please set it in your .env file.");
@@ -24,11 +24,9 @@ bot.onText(/\/help/, (msg) => {
   handleHelpCommand(msg, bot);
 });
 
-
 // Command: Discover
 bot.onText(/\/discover/, async (msg) => {
     const chatId = msg.chat.id;
-  
     try {
         const symbol = getRandomCoinSymbol(); // Ensure this method is implemented to fetch a random symbol
         const coinDetails = await fetchCoinMarketCapInfo(symbol);
@@ -37,8 +35,8 @@ bot.onText(/\/discover/, async (msg) => {
             const detail = coinDetails[0]; // Taking the first result
             let message = `*${detail.name} (${detail.symbol})*\n\n${detail.description}\n`;
   
-            // Inline keyboard markup
-            const options : TelegramBot.SendMessageOptions ={
+            // Inline keyboard markup for Like and Pass
+            const options: TelegramBot.SendMessageOptions = {
                 parse_mode: 'Markdown',
                 reply_markup: {
                     inline_keyboard: [
@@ -62,19 +60,21 @@ bot.onText(/\/discover/, async (msg) => {
 
 bot.on('callback_query', async (callbackQuery) => {
     const chatId = callbackQuery.message?.chat.id;
-    if (!chatId) return;
+    if (!chatId || !callbackQuery.data) return;
 
-    const data = callbackQuery.data; // e.g., "like_WIF" or "pass"
-    if (!data) return;
-
-    if (data.startsWith('like_')) {
-        const symbol = data.split('_')[1]; // e.g., "WIF"
-        
-        // Here, you would initiate the swap or any action you want to perform
-        // For the sake of this example, let's just send a confirmation message
-        bot.sendMessage(chatId, `You liked ${symbol}! Implement swap logic here.`);
-    } else if (data === 'pass') {
+    // Handle Like and Pass
+    if (callbackQuery.data.startsWith('like_')) {
+        const symbol = callbackQuery.data.split('_')[1];
+        bot.sendMessage(chatId, `You liked ${symbol}! //TODO: Implement swap logic here.`);
+    } else if (callbackQuery.data === 'pass') {
         bot.sendMessage(chatId, "Passed! Discover another memecoin with /discover.");
+    }
+    // Handle Wallet Info
+    else if (callbackQuery.data === 'wallet_info') {
+        const { publicKey } = await createOrGetWallet(chatId.toString());
+        const solscanUrl = `https://solscan.io/account/${publicKey}`;
+        const walletInfoResponse = `Your wallet address is: \`${publicKey}\`\n[View on Solscan](${solscanUrl})`;
+        bot.sendMessage(chatId, walletInfoResponse, { parse_mode: 'Markdown' });
     }
 });
 
