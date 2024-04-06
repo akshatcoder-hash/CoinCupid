@@ -69,3 +69,23 @@ export const getWalletInfo = (chatId: string) => {
     }
     return null;
 };
+
+export const createOrGetWallet = (chatId: string) => {
+    const walletPath = path.join(__dirname, '../../wallets', `${chatId}.json`);
+
+    // Check if the wallet already exists
+    if (fs.existsSync(walletPath)) {
+        const walletData = JSON.parse(fs.readFileSync(walletPath, 'utf8'));
+        return { publicKey: walletData.publicKey, isNew: false };
+    }
+
+    // If not, create a new wallet
+    const wallet = Keypair.generate();
+    const publicKey = wallet.publicKey.toString();
+    const privateKey = wallet.secretKey.toString(); //REVIEW to encrypt this for production
+
+    // Save the new wallet info
+    fs.writeFileSync(walletPath, JSON.stringify({ publicKey, privateKey }, null, 2));
+
+    return { publicKey, isNew: true };
+};
