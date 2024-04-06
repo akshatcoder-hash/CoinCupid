@@ -60,3 +60,12 @@ export const getPrivateKey = (publicKey: string): string => {
     const { privateKey } = JSON.parse(fs.readFileSync(walletPath, 'utf8'));
     return decrypt(privateKey);
 };
+
+export const getWalletInfo = (chatId: string) => {
+    const walletPath = path.join(__dirname, '../../wallets', `${chatId}.json`);
+    if (fs.existsSync(walletPath)) {
+        const { publicKey } = JSON.parse(fs.readFileSync(walletPath, 'utf8'));
+        return { publicKey };
+    }
+    return null;
+};
