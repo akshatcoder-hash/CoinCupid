@@ -10,9 +10,9 @@ export const handleStartCommand = async (msg: Message, bot: TelegramBot) => {
     let response = `Welcome to CoinCupid! 💘\n`;
 
     if (isNew) {
-        response += `I've created a new wallet for you! Your wallet address is: \`${publicKey}\`\n`;
+        response += `I've created a new wallet for you! **Your wallet address is**: \`${publicKey}\`\n`;
     } else {
-        response += `You already have a wallet! Your wallet address is: \`${publicKey}\`\n`;
+        response += `You already have a wallet! **Your wallet address is**: \`${publicKey}\`\n`;
     }
 
     response += `💸 Send some SOL to your CoinCupid wallet to begin.\n`;

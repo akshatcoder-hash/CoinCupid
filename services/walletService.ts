@@ -69,6 +69,17 @@ export const getPrivateKey = (publicKey: string): string => {
     return decrypt(privateKey);
 };
 
+export const getDecryptedPrivateKey = async (publicKey: string): Promise<string> => {
+    const walletPath = path.join(__dirname, '../../wallets', `${publicKey}.json`);
+    if (!fs.existsSync(walletPath)) {
+        throw new Error('Wallet not found.');
+    }
+
+    const walletData = JSON.parse(fs.readFileSync(walletPath, 'utf8'));
+    const decryptedPrivateKey = decrypt(walletData.privateKey); // Use the existing decrypt function
+    return decryptedPrivateKey;
+};
+
 export const getWalletInfo = (chatId: string) => {
     const walletPath = path.join(__dirname, '../../wallets', `${chatId}.json`);
     if (fs.existsSync(walletPath)) {
