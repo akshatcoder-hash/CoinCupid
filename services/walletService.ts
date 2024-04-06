@@ -1,14 +1,23 @@
 import { Keypair } from '@solana/web3.js';
 import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
+import { promises as fsPromises } from 'fs';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || ''; // this is 32 bytes for AES-256
-if (ENCRYPTION_KEY === '' || ENCRYPTION_KEY.length !== 32) {
-    console.error('Invalid ENCRYPTION_KEY length. Ensure it is 32 bytes.');
+const ENCRYPTION_KEY_BASE64 = process.env.ENCRYPTION_KEY || ''; // Assuming it's base64 for AES-256
+let encryptionKeyBuffer: Buffer;
+
+try {
+    encryptionKeyBuffer = Buffer.from(ENCRYPTION_KEY_BASE64, 'base64');
+    if (encryptionKeyBuffer.length !== 32) {
+        throw new Error('Key length is not 32 bytes.');
+    }
+} catch (error) {
+    // Using a type assertion
+    console.error('Invalid ENCRYPTION_KEY:', (error as Error).message);
     process.exit(1);
 }
 
@@ -16,8 +25,8 @@ const IV_LENGTH = 16; // For AES, this is always 16
 
 const encrypt = (text: string) => {
     const iv = randomBytes(IV_LENGTH);
-    const cipher = createCipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
-    let encrypted = cipher.update(text);
+    const cipher = createCipheriv('aes-256-cbc', encryptionKeyBuffer, iv);
+    let encrypted = cipher.update(Buffer.from(text, 'utf8'));
 
     encrypted = Buffer.concat([encrypted, cipher.final()]);
     return iv.toString('hex') + ':' + encrypted.toString('hex');
@@ -30,7 +39,7 @@ const decrypt = (text: string) => {
     }
     const iv = Buffer.from(textParts.shift()!, 'hex');
     const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-    const decipher = createDecipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
+    const decipher = createDecipheriv('aes-256-cbc', encryptionKeyBuffer, iv);
     let decrypted = decipher.update(encryptedText);
 
     decrypted = Buffer.concat([decrypted, decipher.final()]);
@@ -39,11 +48,10 @@ const decrypt = (text: string) => {
 
 export const createWallet = () => {
     const wallet = Keypair.generate();
-    const publicKey = wallet.publicKey.toString();
-    const privateKey = wallet.secretKey.toString();
+    const publicKey = wallet.publicKey.toBase58();
+    const privateKey = Buffer.from(wallet.secretKey).toString('hex');
     const privateKeyEncrypted = encrypt(privateKey);
 
-    //REVIEW: use a secure database or something in prod
     const walletData = { publicKey, privateKey: privateKeyEncrypted };
     const walletPath = path.join(__dirname, '../../wallets', `${publicKey}.json`);
     fs.writeFileSync(walletPath, JSON.stringify(walletData, null, 2));
@@ -71,7 +79,13 @@ export const getWalletInfo = (chatId: string) => {
 };
 
 export const createOrGetWallet = (chatId: string) => {
-    const walletPath = path.join(__dirname, '../../wallets', `${chatId}.json`);
+    const walletsDir = path.join(__dirname, '../../wallets');
+    const walletPath = path.join(walletsDir, `${chatId}.json`);
+
+    // Ensure the wallets directory exists
+    if (!fs.existsSync(walletsDir)) {
+        fs.mkdirSync(walletsDir, { recursive: true });
+    }
 
     // Check if the wallet already exists
     if (fs.existsSync(walletPath)) {
@@ -81,11 +95,12 @@ export const createOrGetWallet = (chatId: string) => {
 
     // If not, create a new wallet
     const wallet = Keypair.generate();
-    const publicKey = wallet.publicKey.toString();
-    const privateKey = wallet.secretKey.toString(); //REVIEW to encrypt this for production
+    const publicKey = wallet.publicKey.toBase58();
+    const privateKey = Buffer.from(wallet.secretKey).toString('hex');
+    const privateKeyEncrypted = encrypt(privateKey);
 
     // Save the new wallet info
-    fs.writeFileSync(walletPath, JSON.stringify({ publicKey, privateKey }, null, 2));
+    fs.writeFileSync(walletPath, JSON.stringify({ publicKey, privateKey: privateKeyEncrypted }, null, 2));
 
     return { publicKey, isNew: true };
 };
