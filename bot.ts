@@ -47,7 +47,7 @@ bot.on("callback_query", async (callbackQuery) => {
 
     if (callbackQuery.data.startsWith("like_")) {
         const symbol = callbackQuery.data.split("_")[1];
-        bot.sendMessage(chatId, `You liked ${symbol}! Implement swap logic here.`);
+        bot.sendMessage(chatId, `You liked ${symbol}! //todo: Implement swap logic here.`);
     } else if (callbackQuery.data === "pass") {
         bot.sendMessage(chatId, "Passed! Discover another memecoin with /discover.");
     } else if (callbackQuery.data === "wallet_info") {
@@ -61,13 +61,35 @@ bot.on("callback_query", async (callbackQuery) => {
         const walletInfoMessage = `
 *Your Wallet Information:*\n
 - Public Address: \`${walletInfo.publicKey}\`
-- *Private Key: \`${decryptedPrivateKey}\`* (🚨*Warning*: Never share your private key!)\n
+- *Private Key: \`${decryptedPrivateKey}\`* \n 
+(🚨*Warning*: Never share your private key!)\n
 [View on Solscan](${solscanUrl})
 
 🔒 Keep your private key secure. Only you should have access to this information.
         `;
         bot.sendMessage(chatId, walletInfoMessage, { parse_mode: "Markdown", disable_web_page_preview: true });
     }
+
+    else if (callbackQuery.data === "discover") {
+      // New handler logic as described in the previous message
+      const memecoinInfo = await getRandomCoinSymbolAndLogo(chatId.toString());
+      if (memecoinInfo) {
+          const { symbol, logoUrl } = memecoinInfo;
+          const message = `Discovering a new memecoin: *${symbol}*`;
+          bot.sendPhoto(chatId, logoUrl, {
+              caption: message,
+              parse_mode: "Markdown",
+              reply_markup: {
+                  inline_keyboard: [
+                      [{ text: "👍 Like", callback_data: `like_${symbol}` }, { text: "👎 Pass", callback_data: "pass" }],
+                  ],
+              },
+          });
+      } else {
+          bot.sendMessage(chatId, "Oops! Looks like we've run out of memecoins to discover. Try again later.");
+      }
+  }
+
 });
 
 console.log("CoinCupid bot is running...");
