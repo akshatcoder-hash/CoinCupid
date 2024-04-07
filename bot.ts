@@ -25,9 +25,9 @@ bot.onText(/\/discover/, async (msg) => {
     const chatId = msg.chat.id;
     const memecoinInfo = await getRandomCoinSymbolAndLogo(chatId.toString());
     if (memecoinInfo) {
-        const { symbol, logoUrl } = memecoinInfo;
-        const message = `Discovering a new memecoin: *${symbol}*`;
-        bot.sendPhoto(chatId, logoUrl, {
+        const { symbol, logoUrl, tokenAddress } = memecoinInfo;
+        const solscanUrl = `https://solscan.io/token/${tokenAddress}`;
+        const message = `Discovering a new memecoin: *${symbol}*\nView on [Solscan](${solscanUrl}).`;        bot.sendPhoto(chatId, logoUrl, {
             caption: message,
             parse_mode: "Markdown",
             reply_markup: {
@@ -74,8 +74,10 @@ bot.on("callback_query", async (callbackQuery) => {
       // New handler logic as described in the previous message
       const memecoinInfo = await getRandomCoinSymbolAndLogo(chatId.toString());
       if (memecoinInfo) {
-          const { symbol, logoUrl } = memecoinInfo;
-          const message = `Discovering a new memecoin: *${symbol}*`;
+          const { symbol, logoUrl, tokenAddress } = memecoinInfo;
+          console.log(tokenAddress);
+          const solscanUrl = `https://solscan.io/token/${tokenAddress}`;
+          const message = `Discovering a new memecoin: *${symbol}*, \n View on SolanaFM:(${solscanUrl})`;
           bot.sendPhoto(chatId, logoUrl, {
               caption: message,
               parse_mode: "Markdown",
