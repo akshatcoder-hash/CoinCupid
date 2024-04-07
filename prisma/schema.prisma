@@ -12,3 +12,10 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model Wallet {
+  id                   Int    @id @default(autoincrement())
+  publicKey            String @unique
+  encryptedPrivateKey  String
+  chatId               String @unique
+}
