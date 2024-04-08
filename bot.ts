@@ -3,7 +3,8 @@ dotenv.config();
 import TelegramBot from "node-telegram-bot-api";
 import { handleStartCommand, handleHelpCommand } from "./services/commandService";
 import { getRandomCoinSymbolAndLogo } from "./services/memecoinService";
-import { createOrGetWallet, decrypt } from "./services/walletService";
+import { createOrGetWallet, decrypt, getWalletByChatId } from "./services/walletService";
+import { swapTokens } from "./services/jupiterSwapService";
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) {
@@ -12,6 +13,19 @@ if (!token) {
 }
 
 const bot = new TelegramBot(token, { polling: true });
+
+interface UserState {
+    action: string | 'awaitingAmount';
+    expectingAmountForSymbol?: string;
+    expectingAmountForTokenAddress?: string;
+}
+
+interface UserStates {
+    [chatId: string]: UserState;
+}
+
+let userStates: UserStates = {};
+
 
 bot.onText(/\/start/, (msg) => {
     handleStartCommand(msg, bot);
@@ -42,12 +56,13 @@ bot.onText(/\/discover/, async (msg) => {
 });
 
 bot.on("callback_query", async (callbackQuery) => {
-    const chatId = callbackQuery.message?.chat.id;
+    const chatId = callbackQuery.message?.chat.id.toString(); // Ensure chatId is a string for consistency
     if (!chatId || !callbackQuery.data) return;
 
     if (callbackQuery.data.startsWith("like_")) {
-        const symbol = callbackQuery.data.split("_")[1];
-        bot.sendMessage(chatId, `You liked ${symbol}! //todo: Implement swap logic here.`);
+        const [_, symbol, tokenAddress] = callbackQuery.data.split("_");
+        userStates[chatId] = { action: 'awaitingAmount', expectingAmountForSymbol: symbol, expectingAmountForTokenAddress: tokenAddress};
+        bot.sendMessage(chatId, `You liked ${symbol}! Please enter the amount of SOL you'd like to swap.`);
     } else if (callbackQuery.data === "pass") {
         bot.sendMessage(chatId, "Passed! Discover another memecoin with /discover.");
     } else if (callbackQuery.data === "wallet_info") {
@@ -92,6 +107,55 @@ bot.on("callback_query", async (callbackQuery) => {
       }
   }
 
+});
+
+bot.on('message', async (msg) => {
+    const chatId = msg.chat.id.toString();
+    const text = msg.text || '';
+    const userState = userStates[chatId];
+
+    if (userState?.action === 'awaitingAmount') {
+        const amount = parseFloat(text);
+        if (isNaN(amount) || amount <= 0) {
+            bot.sendMessage(chatId, "Please enter a valid amount of SOL to swap.");
+            return;
+        }
+
+        const walletDetails = await getWalletByChatId(chatId);
+        if (!walletDetails) {
+            bot.sendMessage(chatId, "Error retrieving wallet information. Please try again.");
+            return;
+        }
+
+        const inputMintAddress = 'So11111111111111111111111111111111111111112'; // SOL mint address
+        const outputMintAddress = userState.expectingAmountForTokenAddress; // Retrieve the stored token address for the memecoin
+        const slippageBps = 100; 
+        const inputTokenDecimals = 9; // SOL decimals
+
+        console.log(outputMintAddress);
+
+        if (typeof outputMintAddress === 'string') {
+            const txid = await swapTokens(
+                inputMintAddress, 
+                outputMintAddress, 
+                amount, 
+                slippageBps, 
+                inputTokenDecimals, 
+                walletDetails.publicKey, 
+                walletDetails.encryptedPrivateKey
+            );
+
+            if (txid) {
+                bot.sendMessage(chatId, `Swap executed successfully! Transaction ID: ${txid}`);
+            } else {
+                bot.sendMessage(chatId, "Failed to execute swap.");
+            }
+        } else {
+            bot.sendMessage(chatId, "Failed to identify the output token address.");
+        }        
+        // Reset the user state
+        delete userStates[chatId];
+    }
 });
 
 console.log("CoinCupid bot is running...");
