@@ -9,6 +9,7 @@ import { getRandomCoinSymbolAndLogo } from "./services/memecoinService";
 import {
   createOrGetWallet,
   decrypt,
+  decryptPrivateKeyForDisplay,
   getWalletByChatId,
 } from "./services/walletService";
 import { swapTokens } from "./services/jupiterSwapService";
@@ -108,11 +109,12 @@ bot.on("callback_query", async (callbackQuery) => {
       return;
     }
     const decryptedPrivateKey = decrypt(walletInfo.encryptedPrivateKey);
+    const decryptedPrivateKeyForDisplay = decryptPrivateKeyForDisplay(walletInfo.encryptedPrivateKey);
     const solscanUrl = `https://solscan.io/account/${walletInfo.publicKey}`;
     const walletInfoMessage = `
 *Your Wallet Information:*\n
 - Public Address: \`${walletInfo.publicKey}\`
-- *Private Key: \`${decryptedPrivateKey}\`* \n 
+- *Private Key: \`${decryptedPrivateKeyForDisplay}\`* \n 
 (🚨*Warning*: Never share your private key!)\n
 [View on Solscan](${solscanUrl})
 

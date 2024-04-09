@@ -39,6 +39,21 @@ export const decrypt = (encryptedText: string): Uint8Array => {
   return new Uint8Array(decrypted);
 };
 
+export const decryptPrivateKeyForDisplay = (encryptedText: string): string => {
+  console.log('Encrypted Text:', encryptedText);
+  const textParts = encryptedText.split(':');
+  console.log('Text Parts:', textParts);
+  const iv = Buffer.from(textParts[0], 'hex');
+  const encrypted = textParts[1];
+  console.log('IV:', iv);
+  console.log('Encrypted:', encrypted);
+  const decipher = createDecipheriv('aes-256-cbc', encryptionKeyBuffer, iv);
+  let decrypted = decipher.update(encrypted, 'hex');
+  decrypted = Buffer.concat([decrypted, decipher.final()]);
+  console.log('Decrypted:', decrypted);
+  return bs58.encode(decrypted);
+};
+
 export const createWalletForUser = async (chatId: string): Promise<{ publicKey: string; encryptedPrivateKey: string }> => {
   const wallet = Keypair.generate();
   const publicKey = wallet.publicKey.toBase58();
