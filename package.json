@@ -10,6 +10,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
+    "@types/node": "^20.12.5",
     "@types/node-telegram-bot-api": "^0.64.6",
     "typescript": "^5.4.4"
   },
@@ -21,6 +23,7 @@
     "@solana/web3.js": "^1.91.4",
     "bs58": "^5.0.0",
     "cross-fetch": "^4.0.0",
+    "crypto-js": "^4.2.0",
     "dotenv": "^16.4.5",
     "node-fetch": "^3.3.2",
     "node-telegram-bot-api": "^0.65.1"
