@@ -2,6 +2,7 @@ import { Keypair } from '@solana/web3.js';
 import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
+import bs58 from 'bs58';
 
 dotenv.config();
 
@@ -21,29 +22,30 @@ try {
 
 const IV_LENGTH = 16; // For AES, this is always 16
 
-const encrypt = (text: string): string => {
-    const iv = randomBytes(IV_LENGTH);
-    const cipher = createCipheriv('aes-256-cbc', encryptionKeyBuffer, iv);
-    let encrypted = cipher.update(text, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    return `${iv.toString('hex')}:${encrypted}`;
+const encrypt = (privateKey: Uint8Array): string => {
+  const iv = randomBytes(IV_LENGTH);
+  const cipher = createCipheriv('aes-256-cbc', encryptionKeyBuffer, iv);
+  const encrypted = Buffer.concat([cipher.update(privateKey), cipher.final()]);
+  return `${iv.toString('hex')}:${encrypted.toString('hex')}`;
 };
 
-export const decrypt = (encryptedText: string): string => {
-    const textParts = encryptedText.split(':');
-    const iv = Buffer.from(textParts.shift()!, 'hex');
-    const encrypted = textParts.join(':');
-    const decipher = createDecipheriv('aes-256-cbc', encryptionKeyBuffer, iv);
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
+export const decrypt = (encryptedText: string): Uint8Array => {
+  const textParts = encryptedText.split(':');
+  const iv = Buffer.from(textParts[0], 'hex');
+  const encrypted = textParts[1];
+  const decipher = createDecipheriv('aes-256-cbc', encryptionKeyBuffer, iv);
+  let decrypted = decipher.update(encrypted, 'hex');
+  decrypted = Buffer.concat([decrypted, decipher.final()]);
+  return new Uint8Array(decrypted);
 };
 
 export const createWalletForUser = async (chatId: string): Promise<{ publicKey: string; encryptedPrivateKey: string }> => {
-    const wallet = Keypair.generate();
-    const publicKey = wallet.publicKey.toBase58();
-    const privateKey = Buffer.from(wallet.secretKey).toString('hex');
-    const encryptedPrivateKey = encrypt(privateKey);
+  const wallet = Keypair.generate();
+  const publicKey = wallet.publicKey.toBase58();
+  const privateKey = wallet.secretKey;
+  console.log('Generated Private Key:', privateKey);
+  const encryptedPrivateKey = encrypt(privateKey);
+  console.log('Encrypted Private Key:', encryptedPrivateKey);
   
     // Save the new wallet to the database
     await prisma.wallet.create({

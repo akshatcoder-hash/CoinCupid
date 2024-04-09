@@ -27,44 +27,43 @@ const executeSwap = async (
 ): Promise<string | null> => {
   try {
     const decryptedPrivateKey = decrypt(encryptedPrivateKey);
-    const keypair = Keypair.fromSecretKey(bs58.decode(decryptedPrivateKey));
+    console.log('Decrypted Private Key:', decryptedPrivateKey);
 
-    const swapResponse = await fetch('https://quote-api.jup.ag/v6/swap', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        quoteResponse,
-        userPublicKey,
-        wrapAndUnwrapSol: true,
-      }),
-    });
-
-    const { swapTransaction } = await swapResponse.json();
-
-    const swapTransactionBuf = Buffer.from(swapTransaction, 'base64');
-    const transaction = VersionedTransaction.deserialize(swapTransactionBuf);
-
-    transaction.sign([keypair]);
-
-    const rawTransaction = transaction.serialize();
-    const txid = await connection.sendRawTransaction(rawTransaction, {
-      skipPreflight: true,
-      maxRetries: 2,
-    });
-    await connection.confirmTransaction(txid);
-
-    return txid;
-  } catch (error) {
-    console.error('Error executing swap:', error);
-    return null;
-  }
-};
-
-const calculateSwapAmount = (amount: number, inputDecimals: number): number => {
-  return amount * Math.pow(10, inputDecimals);
-};
+    const keypair = Keypair.fromSecretKey(decryptedPrivateKey);
+      
+      const swapResponse = await fetch('https://quote-api.jup.ag/v6/swap', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          quoteResponse,
+          userPublicKey,
+          wrapAndUnwrapSol: true,
+        }),
+      });
+  
+      const { swapTransaction } = await swapResponse.json();
+      const swapTransactionBuf = Buffer.from(swapTransaction, 'base64');
+      const transaction = VersionedTransaction.deserialize(swapTransactionBuf);
+      transaction.sign([keypair]);
+      const rawTransaction = transaction.serialize();
+  
+      const txid = await connection.sendRawTransaction(rawTransaction, {
+        skipPreflight: true,
+        maxRetries: 2,
+      });
+      await connection.confirmTransaction(txid);
+  
+      return txid;
+    } catch (error) {
+      console.error('Error executing swap:', error);
+      return null;
+    }
+  };
+  const calculateSwapAmount = (amount: number, inputDecimals: number): number => {
+    return amount * Math.pow(10, inputDecimals);
+  };
 
 export const swapTokens = async (
   inputMint: string,
@@ -76,7 +75,6 @@ export const swapTokens = async (
   encryptedPrivateKey: string
 ): Promise<string | null> => {
   const swapAmount = calculateSwapAmount(amount, inputDecimals);
-
   const quoteResponse = await getSwapQuote(inputMint, outputMint, swapAmount, slippageBps);
   if (!quoteResponse) {
     console.error('Failed to get swap quote.');
