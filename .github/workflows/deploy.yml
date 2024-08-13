@@ -3,6 +3,7 @@ name: Deploy CoinCupid Bot
 on:
   push:
     branches: [ main ]  # Trigger the action only when pushing to the main branch
+  workflow_dispatch:
 
 jobs:
   deploy:
