@@ -1,0 +1,36 @@
+name: Deploy CoinCupid Bot
+
+on:
+  push:
+    branches: [ main ]  # Trigger the action only when pushing to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Use Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '22'  # Specify the Node.js version
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run database migrations
+      run: npx prisma migrate deploy
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    - name: Build project
+      run: npm run build
+
+    - name: Start bot
+      run: node dist/bot.js  # Adjust this to the correct path of your compiled bot file
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+        COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
+        SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
